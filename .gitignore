@@ -1,0 +1,78 @@
+# ==========================================
+# Dependencies
+# ==========================================
+node_modules/
+/jspm_packages/
+/web_modules/
+
+# ==========================================
+# Build & Distribution Artifacts
+# ==========================================
+# PixiJS builds, compiled assets, and bundles
+dist/
+build/
+out/
+.cache/
+.vite/
+.turbo/
+
+# TS build info (if incremental compilation is enabled)
+*.tsbuildinfo
+
+# ==========================================
+# Assets & Large Media (Optional but Recommended)
+# ==========================================
+# If you keep raw uncompressed game assets (PSD, Blender, high-res audio)
+# inside your project directory, ignore them here or use Git LFS.
+*.psd
+*.blend
+*.wav
+
+# ==========================================
+# Environment Variables & Secrets
+# ==========================================
+# Contains private API keys, deployment flags, or local configurations
+.env
+.env.local
+.env.*.local
+
+# ==========================================
+# Operating System Junk (macOS Specific)
+# ==========================================
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon\r
+
+# Thumbnails and system files
+._*
+.Spotlight-V100
+.Trashes
+~*.tmp
+
+# ==========================================
+# Code Editor / IDE Configs
+# ==========================================
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+
+# WebStorm / IntelliJ
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ==========================================
+# Logs & Diagnostics
+# ==========================================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
