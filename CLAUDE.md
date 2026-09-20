@@ -11,10 +11,25 @@ Engine code and scene content are strictly separated.
 
 ```
 src/engine/     Rendering, director, time broker, spawner, motion. Scene-agnostic.
+  stage.ts        Renderer, virtual canvas size, integer scaling, frame cap
+  layers.ts       The four parallax containers
+  camera.ts       Ambient sinusoidal drift
+  sky.ts          Dithered gradient (inlined GLSL) + the Sky interface
+  palette.ts      Token -> hex. The ONLY module with colour literals
+  scene-builder.ts  Instantiates a Scene's props into the layers
+  display.ts      Wake lock, fullscreen, click-to-begin overlay
 src/types/      Scene, event, and prop type definitions. The schema of record.
+  scene.ts  layer.ts  prop.ts  sky.ts  palette.ts
+src/main.ts     Boot. Wires engine to one scene; deliberately thin
 content/        Scene and event data. Declarative only, no logic.
-assets/         Art. Mirrors content/ structure.
+  scenes/graveyard-night.ts
+assets/         Art. Mirrors content/ structure. Empty so far — M1's placeholder
+                silhouettes are declarative shapes in content, not files
+reference/      Direction material, NOT shippable assets. See reference/README.md
 ```
+
+Aliases: `@engine/*` -> `src/engine/*`, `@schema/*` -> `src/types/*`, `@content/*` -> `content/*`.
+`@schema` rather than `@types`, which would collide with the `node_modules/@types` convention.
 
 **A new scene must be addable with changes only under `content/` and `assets/`.** If a scene
 needs something in `src/engine/`, that's a missing abstraction — stop and say so rather than
@@ -49,6 +64,10 @@ These break silently and are painful to trace later.
 
 - TypeScript, strict mode.
 - Types in `src/types/` are the schema of record. Content files validate against them.
+- **Adding a colour** is two edits: the token name in `src/types/palette.ts`, then its hex in
+  `src/engine/palette.ts`. The `Record<ColorToken, number>` there makes a missing mapping a
+  compile error. Content refers to tokens only. Prefer reusing a token — the palette is a
+  *limited* set, and a new scene is expected to select from it (`BRIEF.md` §5.7).
 - Motion is procedural (vectors, sine, noise) wherever it works. Sprite-sheet animation only for
   things that genuinely need it, like walk cycles.
 
@@ -56,14 +75,21 @@ These break silently and are painful to trace later.
 
 ## Commands
 
-<!-- TODO(M1): fill in once the project is scaffolded -->
-
 | | |
 |---|---|
-| Dev server | `TBD` |
-| Build | `TBD` |
-| Typecheck | `TBD` |
-| Lint | `TBD` |
+| Dev server | `npm run dev` — Vite on http://127.0.0.1:5173 |
+| Build | `npm run build` — static output to `dist/` |
+| Preview build | `npm run preview` |
+| Typecheck | `npm run typecheck` — `tsc --noEmit`, strict |
+| Lint | none installed — adding one needs a dependency decision (see `BRIEF.md` §8) |
+
+Toolchain is Vite + TypeScript + `pixi.js` and nothing else; see `DECISIONS.md`.
+`tsc` is TypeScript 7, which **removed `baseUrl`** — path aliases in `tsconfig.json` must be
+relative (`./src/engine/*`), and the same aliases are mirrored in `vite.config.ts`.
+
+There is no test runner yet. M1 was verified by driving the real page in a browser and asserting
+the invariants from the console (renderer size, integer scale ladder, whole-pixel layer offsets,
+measured frame rate). Anything that needs a harness should be raised rather than assumed.
 
 ---
 
@@ -80,13 +106,9 @@ These break silently and are painful to trace later.
 ---
 
 <!--
-TODO(M1): once scaffolded, this file should also cover:
-  - Real directory tree, replacing the proposed one above
-  - Working commands in the table above
-  - How to run the debug/tuning panel and toggle the time override
-  - Where the palette module lives and how to add a color
-  - How to add a new event: which files, what the type requires, how weights/cooldowns are set
-  - Any project-specific lint or formatting rules
+Still to document, at the milestone that creates it:
+  - M2: how to add an event (files, type requirements, weights/cooldowns); the time override
+  - M3: how to open the debug/tuning panel
 Keep it under a page. This file loads into context every session — length is a real cost.
-Anything explaining *why* belongs in BRIEF.md, not here.
+Anything explaining *why* belongs in BRIEF.md or DECISIONS.md, not here.
 -->

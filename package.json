@@ -1,0 +1,31 @@
+{
+  "name": "gloaming",
+  "version": "0.1.0",
+  "description": "Ambient pixel-art Halloween scene",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bjray/Gloaming.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/bjray/Gloaming/issues"
+  },
+  "homepage": "https://github.com/bjray/Gloaming#readme",
+  "dependencies": {
+    "pixi.js": "^8.21.0"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  },
+  "private": true
+}

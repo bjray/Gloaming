@@ -1,0 +1,68 @@
+/*
+ * Page chrome only. Scene colours live in src/engine/palette.ts — the values here are the
+ * letterbox and the overlay, which are page furniture rather than part of the scene.
+ */
+
+:root {
+  /* Near-black letterbox. Deliberately darker than the darkest silhouette so the scene never
+     appears to bleed into the surround. */
+  --letterbox: #06030d;
+  --overlay-ink: #e8dcc8;
+  --overlay-veil: rgba(6, 3, 13, 0.72);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--letterbox);
+  overflow: hidden;
+}
+
+body {
+  /* Cursor hidden so a stray pointer over an always-on display is not a bright artefact. */
+  cursor: none;
+}
+
+#stage {
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 0.75rem;
+  background: var(--overlay-veil);
+  color: var(--overlay-ink);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  text-align: center;
+  cursor: pointer;
+  /* The scene renders behind the veil, so the first thing on screen is the artwork rather than
+     a splash. See DECISIONS.md, "Wake lock and fullscreen entry". */
+}
+
+.overlay[hidden] {
+  display: none;
+}
+
+.overlay__title {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+.overlay__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  opacity: 0.72;
+}
