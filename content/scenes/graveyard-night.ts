@@ -1,3 +1,5 @@
+import { batFlutter } from '@content/events/bat-flutter'
+import { ghostDrift } from '@content/events/ghost-drift'
 import type { Scene } from '@schema/scene'
 
 /**
@@ -21,11 +23,40 @@ export const graveyardNight: Scene = {
   id: 'graveyard-night',
   name: 'Graveyard — Night',
 
+  /**
+   * Sky ramp across the day, sampled continuously from `dayPhase` (§5.2).
+   *
+   * The keys stay inside the graveyard's colour family — deep purples and indigos — except at
+   * the warm ends of the cycle, which is where a night scene legitimately sees dawn and dusk.
+   * §5.7's "one colour family per scene" is respected by covering the hours this scene is
+   * actually shown; the daytime keys exist so scrubbing the clock has somewhere to go, and once
+   * scene rotation arrives at M7 the graveyard will simply not be on screen at noon.
+   *
+   * The key at 0.78 reproduces M1's exact night look, so nightfall is where the scene settles.
+   */
   sky: {
-    top: 'skyNightHigh',
-    bottom: 'skyNightLow',
     bands: 14,
     dither: 1,
+    keys: [
+      { at: 0.0, top: 'indigoDeep', bottom: 'purpleDeep' }, // 00:00 deepest night
+      { at: 0.21, top: 'purpleDeep', bottom: 'skyDawnLow' }, // 05:00 horizon warming
+      { at: 0.29, top: 'skyDayHigh', bottom: 'skyDayLow' }, // 07:00 day
+      { at: 0.69, top: 'skyDuskHigh', bottom: 'skyDuskLow' }, // 16:30 sunset
+      { at: 0.78, top: 'skyNightHigh', bottom: 'skyNightLow' }, // 18:45 nightfall — the M1 look
+    ],
+  },
+
+  /**
+   * Event pool. `meanSpawnIntervalSeconds` is the mean of an exponential distribution, not a
+   * period: §5.3 warns that a fixed grid feels quantised even with random outcomes.
+   *
+   * `maxConcurrent: 4` is the global cap that keeps the scene from feeling crowded. Two events
+   * is all M2 calls for; the rest of the set arrives at M4.
+   */
+  events: {
+    meanSpawnIntervalSeconds: 18,
+    maxConcurrent: 4,
+    events: [ghostDrift, batFlutter],
   },
 
   props: [

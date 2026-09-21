@@ -79,4 +79,5 @@ pnpm-debug.log*
 
 # local screenshots / browser automation scratch
 .playwright-mcp/
-m1-*.png
+# local screenshots from browser verification
+m[0-9]-*.png

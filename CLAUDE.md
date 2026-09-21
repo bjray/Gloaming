@@ -13,16 +13,21 @@ Engine code and scene content are strictly separated.
 src/engine/     Rendering, director, time broker, spawner, motion. Scene-agnostic.
   stage.ts        Renderer, virtual canvas size, integer scaling, frame cap
   layers.ts       The four parallax containers
-  camera.ts       Ambient sinusoidal drift
-  sky.ts          Dithered gradient (inlined GLSL) + the Sky interface
+  camera.ts       Ambient triangle-wave drift
+  time-broker.ts  The ONLY module that reads the system clock
+  director.ts     Event scheduler: Poisson spacing, weights, cooldowns, caps
+  motion.ts       The motion vocabulary + lifetime fade
+  sky.ts          Dithered gradient (inlined GLSL), sampled from dayPhase
   palette.ts      Token -> hex. The ONLY module with colour literals
+  visual.ts       The one place declarative geometry becomes a display object
   scene-builder.ts  Instantiates a Scene's props into the layers
   display.ts      Wake lock, fullscreen, click-to-begin overlay
 src/types/      Scene, event, and prop type definitions. The schema of record.
-  scene.ts  layer.ts  prop.ts  sky.ts  palette.ts
+  scene.ts  layer.ts  prop.ts  visual.ts  sky.ts  palette.ts  time.ts  event.ts  motion.ts
 src/main.ts     Boot. Wires engine to one scene; deliberately thin
 content/        Scene and event data. Declarative only, no logic.
   scenes/graveyard-night.ts
+  events/ghost-drift.ts  events/bat-flutter.ts
 assets/         Art. Mirrors content/ structure. Empty so far — M1's placeholder
                 silhouettes are declarative shapes in content, not files
 reference/      Direction material, NOT shippable assets. See reference/README.md
@@ -51,6 +56,11 @@ These break silently and are painful to trace later.
 - **Only the Time Broker reads the system clock.** Everything else queries the broker.
 - A single `Date.now()` call elsewhere silently breaks the debug time override, which is the only
   way to work on night scenes during the day.
+- `dayPhase` drives colour; `timeBlock` drives selection. Never the other way round.
+- Wrap cyclic values with `wrap()` from `src/types/time.ts`. **Never** `((x % p) + p) % p` — it
+  loses a ULP and broke the 05:00 block boundary.
+- The Director is paced by *real* elapsed time, not day-phase time, so running the clock fast to
+  review lighting does not distort event pacing.
 
 ### Lifecycle
 - This runs unattended for 8+ hours. Leaks are the primary failure mode.
@@ -64,6 +74,13 @@ These break silently and are painful to trace later.
 
 - TypeScript, strict mode.
 - Types in `src/types/` are the schema of record. Content files validate against them.
+- **Adding an event** is one file under `content/events/` exporting an `EventDef`, plus an entry
+  in the scene's `events.events` array. `src/types/event.ts` is the contract: weight, cooldown,
+  min/max duration, maxConcurrent, eligible blocks, layer, origin box, motion, visuals, fade.
+  Keep motion above ~10 px/s or it steps visibly instead of gliding.
+- **Time override** (no panel until M3): `__gloaming.time.scrubTo(21)` holds the scene at 9pm,
+  `.setRate(0)` freezes, `.setRate(120)` runs a day in 12 minutes, `.clearOverride()` resumes the
+  wall clock. `__gloaming.director.trigger('ghost-drift')` forces an event.
 - **Adding a colour** is two edits: the token name in `src/types/palette.ts`, then its hex in
   `src/engine/palette.ts`. The `Record<ColorToken, number>` there makes a missing mapping a
   compile error. Content refers to tokens only. Prefer reusing a token — the palette is a
@@ -107,7 +124,6 @@ measured frame rate). Anything that needs a harness should be raised rather than
 
 <!--
 Still to document, at the milestone that creates it:
-  - M2: how to add an event (files, type requirements, weights/cooldowns); the time override
   - M3: how to open the debug/tuning panel
 Keep it under a page. This file loads into context every session — length is a real cost.
 Anything explaining *why* belongs in BRIEF.md or DECISIONS.md, not here.

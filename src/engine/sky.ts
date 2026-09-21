@@ -1,7 +1,8 @@
 import { Filter, Graphics } from 'pixi.js'
-import type { SkyGradient } from '@schema/sky'
+import type { SkyKey, SkyRamp } from '@schema/sky'
+import { wrap } from '@schema/time'
 import type { LayerSet } from './layers'
-import { resolveRgb } from './palette'
+import { lerpRgb } from './palette'
 import { VIRTUAL_HEIGHT, VIRTUAL_WIDTH } from './stage'
 
 /**
@@ -119,13 +120,56 @@ void main(void) {
 }
 `
 
+/**
+ * Locate the pair of keys bracketing `dayPhase`, and the position between them.
+ *
+ * Keys wrap: past the last key we interpolate back into the first across midnight, so there is
+ * no discontinuity at 00:00. Writes into `out` to stay allocation-free.
+ */
+function bracketKeys(
+  keys: readonly SkyKey[],
+  dayPhase: number,
+  out: { from: SkyKey; to: SkyKey; t: number },
+): void {
+  const phase = wrap(dayPhase, 1)
+  const first = keys[0] as SkyKey
+  const last = keys[keys.length - 1] as SkyKey
+
+  if (keys.length === 1) {
+    out.from = first
+    out.to = first
+    out.t = 0
+    return
+  }
+
+  for (let i = 0; i < keys.length - 1; i += 1) {
+    const a = keys[i] as SkyKey
+    const b = keys[i + 1] as SkyKey
+    if (phase >= a.at && phase < b.at) {
+      out.from = a
+      out.to = b
+      out.t = (phase - a.at) / (b.at - a.at)
+      return
+    }
+  }
+
+  // Outside the keyed span: between the last key and the first, across midnight.
+  const span = 1 - last.at + first.at
+  const travelled = phase >= last.at ? phase - last.at : 1 - last.at + phase
+  out.from = last
+  out.to = first
+  out.t = span === 0 ? 0 : travelled / span
+}
+
 export interface Sky {
   /**
-   * Retint the gradient. M1 calls this once with fixed night colours; M2 will call it from the
-   * Time Broker's continuous `dayPhase`, with no change needed here — which is the entire
-   * reason the gradient is procedural rather than an authored texture.
+   * Sample the ramp at a `dayPhase` and push the result to the shader.
+   *
+   * This is the payoff of building the gradient procedurally: the Time Broker's continuous value
+   * drives it directly, so sunset is a gradual shift rather than a switch flipping at a
+   * threshold (§5.2). No engine change was needed between M1 and M2 — only this call.
    */
-  setGradient(gradient: SkyGradient): void
+  update(dayPhase: number): void
   /**
    * Unbind the filter, leaving the quad in place.
    *
@@ -152,13 +196,16 @@ export interface Sky {
  * Build the sky's base gradient into the `sky` layer.
  *
  * Cloud striations are *not* part of this: per the hybrid decision they arrive as ordinary
- * sprite or shape props on the `sky` and `backdrop` layers, composited over this gradient and
- * tinted from the same day phase. Keeping them separate is what lets the gradient interpolate
- * continuously while the clouds stay hand-authored.
+ * shape props on the `sky` and `backdrop` layers, composited over this gradient. Keeping them
+ * separate is what lets the gradient interpolate continuously while the clouds stay authored.
  */
-export function createSky(gradient: SkyGradient, layers: LayerSet): Sky {
-  const topColor = resolveRgb(gradient.top)
-  const bottomColor = resolveRgb(gradient.bottom)
+export function createSky(ramp: SkyRamp, layers: LayerSet): Sky {
+  if (ramp.keys.length === 0) {
+    throw new Error('[gloaming] Sky ramp needs at least one key.')
+  }
+
+  const topColor = new Float32Array(3)
+  const bottomColor = new Float32Array(3)
 
   const filter = Filter.from({
     gl: { vertex: DITHER_VERTEX, fragment: DITHER_FRAGMENT },
@@ -166,13 +213,13 @@ export function createSky(gradient: SkyGradient, layers: LayerSet): Sky {
       skyUniforms: {
         uTopColor: { value: topColor, type: 'vec3<f32>' },
         uBottomColor: { value: bottomColor, type: 'vec3<f32>' },
-        uBands: { value: gradient.bands, type: 'f32' },
-        uDither: { value: gradient.dither, type: 'f32' },
+        uBands: { value: ramp.bands, type: 'f32' },
+        uDither: { value: ramp.dither, type: 'f32' },
       },
     },
   })
 
-  // Padding would expand the filter area beyond the quad and skew vTextureCoord off the 0–1
+  // Padding would expand the filter area beyond the quad and skew vTextureCoord off the 0-1
   // range the gradient depends on.
   filter.padding = 0
 
@@ -190,23 +237,19 @@ export function createSky(gradient: SkyGradient, layers: LayerSet): Sky {
   layers.containers.sky.addChild(quad)
 
   const uniforms = filter.resources['skyUniforms'] as {
-    uniforms: {
-      uTopColor: Float32Array
-      uBottomColor: Float32Array
-      uBands: number
-      uDither: number
-    }
+    uniforms: { uTopColor: Float32Array; uBottomColor: Float32Array }
   }
 
-  return {
-    setGradient(next: SkyGradient): void {
-      // Written in place: no allocation, so this stays safe to call at day-phase cadence.
-      resolveRgb(next.top, topColor)
-      resolveRgb(next.bottom, bottomColor)
+  // Reused across frames so sampling the ramp allocates nothing.
+  const bracket = { from: ramp.keys[0] as SkyKey, to: ramp.keys[0] as SkyKey, t: 0 }
+
+  const sky: Sky = {
+    update(dayPhase: number): void {
+      bracketKeys(ramp.keys, dayPhase, bracket)
+      lerpRgb(bracket.from.top, bracket.to.top, bracket.t, topColor)
+      lerpRgb(bracket.from.bottom, bracket.to.bottom, bracket.t, bottomColor)
       uniforms.uniforms.uTopColor = topColor
       uniforms.uniforms.uBottomColor = bottomColor
-      uniforms.uniforms.uBands = next.bands
-      uniforms.uniforms.uDither = next.dither
     },
     detach(): void {
       quad.filters = []
@@ -219,4 +262,6 @@ export function createSky(gradient: SkyGradient, layers: LayerSet): Sky {
       filter.destroy()
     },
   }
+
+  return sky
 }

@@ -1,6 +1,7 @@
 import type { LayerId } from './layer'
 import type { Prop } from './prop'
-import type { SkyGradient } from './sky'
+import type { EventPool } from './event'
+import type { SkyRamp } from './sky'
 
 /**
  * A scene: a sky, a set of props distributed across the four layers, and optional parallax
@@ -15,7 +16,9 @@ export interface Scene {
   readonly id: string
   /** Human-readable, for the debug panel. */
   readonly name: string
-  readonly sky: SkyGradient
+  readonly sky: SkyRamp
+  /** Events eligible in this scene, and their pacing. */
+  readonly events: EventPool
   /** Overrides for `DEFAULT_PARALLAX`. Omitted layers keep their default. */
   readonly parallax?: Partial<Record<LayerId, number>>
   readonly props: readonly Prop[]

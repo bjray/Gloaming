@@ -1,35 +1,11 @@
-import { Graphics } from 'pixi.js'
-import type { Prop } from '@schema/prop'
+import type { Graphics } from 'pixi.js'
 import type { Scene } from '@schema/scene'
 import type { LayerSet } from './layers'
-import { resolve } from './palette'
+import { drawVisual } from './visual'
 
 export interface SceneInstance {
   readonly scene: Scene
   destroy(): void
-}
-
-/**
- * Draw one prop. Kept exhaustive over `Prop` so adding a prop kind to the schema is a compile
- * error here rather than a silently missing shape at runtime.
- */
-function drawProp(prop: Prop): Graphics {
-  const g = new Graphics({ label: prop.id })
-  const color = resolve(prop.color)
-
-  switch (prop.kind) {
-    case 'shape':
-      g.poly(prop.points as number[]).fill({ color })
-      break
-    case 'rect':
-      g.rect(prop.x, prop.y, prop.width, prop.height).fill({ color })
-      break
-    case 'circle':
-      g.circle(prop.x, prop.y, prop.radius).fill({ color })
-      break
-  }
-
-  return g
 }
 
 /**
@@ -44,7 +20,7 @@ export function buildScene(scene: Scene, layers: LayerSet): SceneInstance {
   const drawn: Graphics[] = []
 
   for (const prop of scene.props) {
-    const g = drawProp(prop)
+    const g = drawVisual(prop, prop.id)
     layers.containers[prop.layer].addChild(g)
     drawn.push(g)
   }

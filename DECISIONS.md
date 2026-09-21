@@ -7,6 +7,91 @@ questions still open.
 
 ---
 
+## 2026-09-20 — Motion vocabulary is engine-owned, parameters are content-owned
+
+**Raised, not settled unilaterally** — this qualifies a rule in CLAUDE.md and deserves a ruling.
+
+`src/types/motion.ts` defines a **closed** set of motion kinds (`linear`, `drift`). Content picks
+a kind and supplies its numbers; the engine owns which kinds exist. Adding a genuinely new *kind*
+of motion is an engine change.
+
+**Why this is the right split.** §5.3 frames motion as a "motion vocabulary" — linear
+trajectories across a flat X-plane, sine offsets, noise offsets — not as an open extension point.
+A vocabulary is a closed set by definition. The alternative is content supplying behaviour as
+code, which `CLAUDE.md` forbids outright ("Declarative only, no logic") and which would make
+scene files unreviewable.
+
+**Why it needs flagging anyway.** `CLAUDE.md` says "a new scene must be addable with changes only
+under `content/` and `assets/`", and instructs that needing engine code means a missing
+abstraction. A scene wanting motion genuinely outside the vocabulary *does* touch the engine. The
+claim here is that this is a capability boundary rather than a missing abstraction — motion kinds
+are engine primitives in the same way the renderer's shape primitives are — but that is a
+judgement, and the owner may prefer to read the rule more strictly.
+
+**Practical consequence.** Adding a scene: content only. Adding an event that reuses existing
+motion: content only. Adding an event needing novel motion: one engine addition, then content.
+M4's bat-swarm noise offsets and M6's walk cycles are the next two cases that will test it.
+
+## 2026-09-20 — Time Broker and Director
+
+M2. See BRIEF.md §5.2 and §5.3.
+
+### Two clocks, deliberately independent
+
+`dayPhase` (continuous) drives colour. `timeBlock` (named) drives selection — which events are
+eligible, and which scene once rotation arrives. §5.2 is emphatic and the reason is concrete:
+drive colour from the block and the sky changes in a visible jump at 16:30 every day.
+
+**The Director is paced by real elapsed time, not day-phase time.** Running the broker at 120x to
+inspect a sunset must not also make bats swarm at 120x, or there is no way to judge pacing while
+scrubbing. Verified: 20 wall seconds at rate 120 advanced 0.67 simulated hours and produced 1
+spawn, which is right for an 18-second mean interval in real time.
+
+### The clock is read in exactly one place
+
+Enforced and checked: `grep` for `Date.now()`/`new Date()` outside `time-broker.ts` returns
+nothing. The broker polls once a second rather than every frame — ample for a value moving
+1/86400 per second, and it keeps the per-frame path free of clock calls.
+
+Override is three controls rather than one: `scrubTo(hours)` positions, `setRate(0)` freezes,
+`setRate(n)` runs fast. Overridden time advances from the frame delta, never from the clock, so
+`rate: 0` is a true freeze and any other rate is reproducible.
+
+### A floating-point bug worth remembering
+
+The idiom `((x % p) + p) % p`, used to normalise cyclic values, **loses precision**. For
+`dayPhase = 5/24 = 0.20833333333333334` it returns `0.20833333333333326` — one ULP smaller. That
+was enough for 05:00 to fail `>= from` on its own `sunrise` window and fall through to `night`'s
+wrapping window: the wrong event pool, for one instant, once a day, from a rounding error.
+
+Replaced everywhere by `wrap()` in `src/types/time.ts`, which touches the arithmetic only when
+the value is actually negative and so returns in-range values bit-identical. Four call sites had
+the bug. Verified: all 14 boundary cases pass, and a 1440-minute sweep tiles §5.2's table exactly
+(night 660, day 630, sunset 90, sunrise 60) with nothing thrown.
+
+### Scheduling
+
+Intervals are exponentially distributed, never a fixed grid — §5.3 warns that rolling dice on a
+grid feels quantised even with random outcomes. Measured over two simulated hours: 289 spawns,
+gaps from 0.03s to 114s, coefficient of variation 0.75. A fixed grid would be ~0.
+
+The observed mean gap (24.8s) exceeds the configured 18s because a scheduled attempt that finds
+nothing eligible redraws its interval and skips rather than queueing. That is intentional: the
+alternative is a burst the instant eligibility returns. It does mean **`meanSpawnIntervalSeconds`
+is a floor on spacing, not the achieved average** — worth knowing when tuning pacing at M4.
+
+Verified: eligibility (600s in `day` produced 0 spawns, as neither event lists that block),
+per-event and global concurrency caps (peak 3 against a cap of 4, 0 violations), `trigger()`
+refusing an over-cap spawn and an unknown id, and **zero leaked display objects across 150
+spawn/retire cycles** on all four layers.
+
+### Known gap: only the sky responds to time
+
+§5.2 wants "sky tint, ambient light level, and window glow" all interpolating. Only the sky ramp
+does. Props are static, so scrubbing to midday leaves stars visible against a bright sky and the
+mausoleum window lit at noon. Not built because M2's scope is the broker and the director, and
+§7 puts sunset/sunrise interpolation at **M7**. Flagged so it is not mistaken for finished.
+
 ## 2026-09-20 — Camera drift: triangle wave, quantised globally, backdrop factor raised
 
 Prompted by review feedback at the M1 gate: "the drift back and forth is a little jumping,

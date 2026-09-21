@@ -11,14 +11,21 @@
  * colour family per scene").
  */
 export type ColorToken =
-  // Night sky — the graveyard's continuous gradient endpoints.
+  // Sky ramp across the day. `dayPhase` interpolates between these; the named time block
+  // never selects them (§5.2).
   | 'skyNightHigh'
   | 'skyNightLow'
+  | 'skyDawnLow'
+  | 'skyDayHigh'
+  | 'skyDayLow'
+  | 'skyDuskHigh'
+  | 'skyDuskLow'
   // Light emitters. The only tokens allowed high-contrast detail (§5.7).
   | 'moonAmber'
   | 'moonHalo'
   | 'windowAmber'
   | 'pumpkinGlow'
+  | 'ghostPale'
   // Structural silhouettes, far to near. Nearer is darker: atmospheric perspective is what
   // makes the parallax read as depth rather than as sliding cardboard.
   | 'silhouetteFar'
