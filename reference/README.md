@@ -72,3 +72,43 @@ pixel pipeline. Layer 4 masks three of the four window edges, which is the job �
 evidence *for* the brief's proposed answer — layer 2's warm silhouette against the banded coral
 sky works. Not treated as settled; it remains the owner's call at M6, and follow-up 3 should be
 resolved before judging it.
+
+---
+
+## `graveyard-night` set — review notes (2026-09-20)
+
+Authored art for the V1 scene, to be consumed at **M3.5**. Four layers, same naming convention.
+
+| Layer | Content | Verdict |
+|---|---|---|
+| 1 `night-sky` | Smooth gradient `#071030`→`#302871`, cream moon `#FCF6EF`, 3 stars `#758BC2`, far hill `#1C0B3B` | Colours yes, gradient no |
+| 2 `low-rollers` | Two paths, pale lavender `#B9BCF3` | Use directly |
+| 3 `silhouette-panorama` | Tombstones, leaning crosses, wrought-iron gate. `#231533` + grey accents | Use directly — the big win |
+| 4 `vignette-spooky-frame` | Gnarled tree, jack-o'-lanterns, mist. `#020202`, faces `#B5613A` | Flatten alpha first |
+
+**Layer 3 is a large upgrade** on M1's placeholder rectangles, and `#231533` already sits in the
+graveyard's purple family. Prioritise it.
+
+**Layer 4 fixes the cut-out problem** flagged in the `salem-day` notes: the jack-o'-lantern faces
+are filled with a warm emitter colour rather than left transparent, so they read as glowing
+rather than as holes.
+
+**Follow-ups:**
+
+1. **The layer 1 gradient must not ship as art.** It is a smooth vertical gradient, and
+   rasterising one at 640×360 produces exactly the banding §5.4 requires dithering to avoid — and
+   which the engine already generates procedurally. Its value is the two stop colours becoming
+   sky-ramp keys, replacing the invented night palette in `src/engine/palette.ts` with the
+   authored one. The moon, stars and far hill ship separately as props.
+2. **Layer 4 carries 159 distinct opacity values and 28 gradients** — the mist tendrils. Soft
+   alpha ramps are the opposite of the flat nearest-neighbour idiom and will band and crawl at
+   pixel scale. Flatten to a few alpha steps, or drop the mist and let drifting fog arrive as an
+   M4 event instead. The silhouette underneath is sound.
+3. **Geometry, again.** Layers 1-3 are 1024×572 / 1024×585; layer 4 is 1792×1024. None match each
+   other, none are 16:9, none are an integer multiple of 640×360. Re-export all four at
+   **1280×720**, which halves cleanly.
+4. **Layer 2's brightness was reviewed and accepted.** At `#B9BCF3` the hills are the largest
+   high-contrast area after the moon, which tensions with §5.7's "stay dark and desaturated
+   overall so the window remains peripheral". The owner judged the composition — dark tombstones
+   silhouetted against pale moonlit hills — worth it. Recorded so it is not re-raised as a defect;
+   revisit only if it pulls the eye during M8's soak.

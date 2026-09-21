@@ -7,6 +7,41 @@ questions still open.
 
 ---
 
+## 2026-09-20 — SVG art converts by alpha-threshold; art pipeline deferred to M3.5
+
+Owner-authored graveyard art landed in `reference/` during the M2 gate. Three rulings.
+
+### Conversion: alpha-threshold, not anti-aliased downsampling
+
+Render each layer large, threshold its alpha to 1-bit, and fill with a palette token.
+
+**Why.** The layers are single-colour silhouettes, which is the case this handles near-perfectly:
+shapes land exactly on the pixel grid with no anti-aliased fringe, which is what the
+nearest-neighbour invariant requires. Plain anti-aliased rasterisation was rejected because
+downsampled vector art reads as *shrunk vector art*, not pixel art, and its soft edges collide
+with the invariant outright. Hand-cleaning every asset in a pixel editor was rejected as the
+default because the cost recurs on every art revision.
+
+**Accepted cost.** The wrought-iron gate's scrollwork will partly disappear at 640px wide.
+Hand-fix that one element if it matters; do not hand-clean everything on its account.
+
+### Slot: M3.5, after the tuning panel, before "graveyard complete"
+
+The owner asked for it later than immediately, and M3 proceeds first. Placed between M3 and M4
+rather than at the end of the schedule: M3's panel and M4's pacing pass both exist to judge
+*feel*, and tuning against placeholder rectangles and then swapping in real art would invalidate
+the tuning. Numbered 3.5 so M4-M8 keep their existing numbers.
+
+No conflict with §4's locked "V1 art: free/placeholder assets only" — self-made art satisfies it.
+
+### Layer 2's brightness: reviewed and accepted
+
+At `#B9BCF3` the rolling hills are the largest high-contrast area in frame after the moon, which
+tensions with §5.7 ("stay dark and desaturated overall so the window remains peripheral over long
+uptime"). The owner judged the composition worth it — dark tombstones silhouetted against pale
+moonlit hills. **Recorded so it is not re-raised as a defect.** Revisit only if it proves to pull
+the eye during M8's soak.
+
 ## 2026-09-20 — Motion vocabulary is engine-owned, parameters are content-owned
 
 **Settled by the owner, 2026-09-20: adding a motion kind is an engine primitive, not a missing

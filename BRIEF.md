@@ -231,6 +231,17 @@ Hidden debug overlay: time scrub and freeze, event frequency sliders, force-trig
 concurrency cap, FPS/memory readout, layer toggles. This is the tool for judging feel, so it
 matters early.
 
+**M3.5 — Art pipeline**
+Replace the graveyard's placeholder shapes with the authored SVG art in `reference/`. Adds a
+`sprite` visual kind to the schema, texture loading, and an offline SVG-to-PNG rasterisation step
+feeding `assets/`. Records every asset's source and licence in `ASSETS.md`. Conversion is by
+**alpha-threshold** — see `DECISIONS.md`.
+
+Slotted *after* M3 and *before* M4 deliberately: M3's panel and M4's pacing pass both exist to
+judge feel, and tuning against placeholder rectangles then swapping in real art at the end would
+invalidate the tuning. The art is graveyard art, so it wants to land before the graveyard is
+called complete.
+
 **M4 — Graveyard complete**
 Full event set. Ambient loops. Procedural drift motion. Pacing tuned through the panel until the
 scene feels right over a long session.
