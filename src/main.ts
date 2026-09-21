@@ -7,6 +7,7 @@ import { buildScene } from '@engine/scene-builder'
 import { createSky } from '@engine/sky'
 import { createStage } from '@engine/stage'
 import { createTimeBroker } from '@engine/time-broker'
+import { createDebugPanel } from '@debug/panel'
 
 /**
  * Boot. See BRIEF.md §7.
@@ -39,6 +40,15 @@ async function boot(): Promise<void> {
     target: document.documentElement,
   })
 
+  const panel = createDebugPanel({
+    time,
+    camera,
+    director,
+    layers,
+    maxDriftAmplitudePx: scene.maxDriftAmplitudePx,
+    onReserveChange: (px) => stage.setHorizontalReserve(px),
+  })
+
   /**
    * The per-frame path. Allocates nothing (CLAUDE.md).
    *
@@ -51,6 +61,9 @@ async function boot(): Promise<void> {
     sky.update(time.dayPhase)
     camera.update(deltaSeconds)
     director.update(deltaSeconds, time.timeBlock)
+    // A bare increment. The panel derives fps from this over a window, because PixiJS's
+    // `ticker.FPS` is an instantaneous reading and lies under a frame cap.
+    panel.countFrame()
   }
   stage.app.ticker.add(tick)
 
@@ -61,6 +74,7 @@ async function boot(): Promise<void> {
   const dispose = (): void => {
     stage.app.ticker.remove(tick)
     sky.detach()
+    panel.destroy()
     display.destroy()
     director.destroy()
     instance.destroy()
@@ -74,7 +88,7 @@ async function boot(): Promise<void> {
     // Handle for driving things from the console until the M3 panel exists. The time override is
     // the important one: `__gloaming.time.scrubTo(21)` puts the scene at 9pm regardless of the
     // wall clock, which is the only way to review a night scene during the day (§5.2).
-    __gloaming: { stage, layers, time, sky, camera, director, instance, display, tick, dispose },
+    __gloaming: { stage, layers, time, sky, camera, director, instance, display, panel, tick, dispose },
   })
 }
 

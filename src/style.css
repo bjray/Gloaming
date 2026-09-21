@@ -66,3 +66,127 @@ body {
   letter-spacing: 0.18em;
   opacity: 0.72;
 }
+
+/*
+ * Tuning panel (M3). Debug chrome, deliberately outside the virtual canvas — see
+ * src/debug/panel.ts on why this is DOM rather than PixiJS.
+ */
+
+body.has-panel {
+  /* The scene hides the cursor for an always-on display; the panel needs it back. */
+  cursor: auto;
+}
+
+body.has-panel #stage {
+  /* Keep the scene centred in the space left over, not under the panel. */
+  margin-right: 20rem;
+}
+
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 10;
+  width: 20rem;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: 0.75rem 0.9rem 1.1rem;
+  background: rgba(6, 3, 13, 0.93);
+  border-left: 1px solid rgba(232, 220, 200, 0.14);
+  color: #e8dcc8;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+.panel__title {
+  margin: 0 0 0.6rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.panel__section {
+  margin-bottom: 0.9rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(232, 220, 200, 0.1);
+}
+
+.panel__heading {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffc65c;
+  opacity: 0.85;
+}
+
+.panel__row,
+.panel__event {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+  min-height: 1.35rem;
+}
+
+.panel__label {
+  flex: 0 0 4.6rem;
+  opacity: 0.6;
+}
+
+.panel__event-name {
+  flex: 0 0 5.2rem;
+  color: #bfa8d9;
+}
+
+.panel__value {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+.panel__slider {
+  flex: 1 1 auto;
+  min-width: 3rem;
+  accent-color: #ffc65c;
+}
+
+.panel__button {
+  padding: 0.1rem 0.4rem;
+  background: rgba(232, 220, 200, 0.08);
+  border: 1px solid rgba(232, 220, 200, 0.2);
+  border-radius: 2px;
+  color: inherit;
+  font: inherit;
+  font-size: 0.66rem;
+  cursor: pointer;
+}
+
+.panel__button:hover {
+  background: rgba(232, 220, 200, 0.16);
+}
+
+.panel__button--on {
+  background: #ffc65c;
+  border-color: #ffc65c;
+  color: #06030d;
+}
+
+.panel__check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.panel__note {
+  margin: 0.3rem 0 0;
+  font-size: 0.62rem;
+  opacity: 0.45;
+}

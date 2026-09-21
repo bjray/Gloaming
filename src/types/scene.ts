@@ -21,5 +21,17 @@ export interface Scene {
   readonly events: EventPool
   /** Overrides for `DEFAULT_PARALLAX`. Omitted layers keep their default. */
   readonly parallax?: Partial<Record<LayerId, number>>
+
+  /**
+   * How much camera drift this scene's art can absorb, in virtual pixels.
+   *
+   * A scene knows its own overscan; the engine does not. Declaring the budget here is what lets
+   * the tuning panel bound its amplitude slider instead of cheerfully sliding a bare gap into
+   * view at the frame edge — the exact trap the M1 overscan fix left open (see DECISIONS.md).
+   *
+   * Set it to the *narrowest* overscan among edge-anchored props, minus a little margin, divided
+   * by the largest parallax factor in use.
+   */
+  readonly maxDriftAmplitudePx: number
   readonly props: readonly Prop[]
 }

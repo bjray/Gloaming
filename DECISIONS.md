@@ -7,6 +7,61 @@ questions still open.
 
 ---
 
+## 2026-09-20 — Tuning panel: DOM overlay, override layer, canvas re-fit
+
+M3. See BRIEF.md §7 — "this is the tool for judging feel, so it matters early."
+
+### DOM, not PixiJS
+
+The panel is chrome, not scene. Rendering it inside the 640×360 virtual canvas would put debug
+text on the pixel grid, push it through the nearest-neighbour upscale, and make it part of the
+thing being judged. DOM also supplies real sliders and checkboxes for nothing.
+
+### An override layer, never a write to content
+
+Pacing changes land in `director.tuning`, seeded from the scene's authored `EventPool`; camera
+changes land in `camera.config`. Neither writes back to `content/`.
+
+This keeps the authored numbers the reviewable source of truth, and makes a reload a reliable way
+back to them. The workflow M4 expects: slide until the pacing feels right, then copy the settled
+values into content as a deliberate, reviewable edit. A panel that wrote straight to content
+would make tuning invisible in diffs and impossible to revert.
+
+`weightScale` multiplies each event's authored weight rather than replacing it, so the authored
+relative weights stay meaningful and 0 cleanly disables one event for A/B.
+
+### The canvas re-fits beside the panel
+
+First version overlaid the scene and covered the moon — a tool for judging feel is useless while
+it covers what is being judged. The panel now reports its measured width and the stage reserves
+that space, stepping the integer scale down if it must (verified: 2x to 1x at a 1280px viewport,
+and back on close).
+
+Stepping the scale is the honest fix. Overlapping hides the scene; scaling fractionally to fit
+would break the integer-only invariant to accommodate a debug overlay, which is the wrong thing
+to sacrifice.
+
+### Two details worth keeping
+
+**Frame rate is measured over a window.** `ticker.FPS` is an instantaneous reading from the last
+frame pair and reported 123 while the real, capped rate was 29.5. The panel counts frames from
+the ticker — a bare increment, no allocation — and divides by its own 5Hz refresh interval.
+
+**The amplitude slider is bounded by content.** `Scene.maxDriftAmplitudePx` is declared per scene
+(40 for the graveyard, against 48px of foreground overscan). A scene knows its own overscan; the
+engine does not. Without this the slider would cheerfully slide a bare gap into view at the frame
+edge — the exact trap left open by the M1 overscan fix.
+
+The panel refreshes at 5Hz on its own timer, not on the ticker, so DOM text updates never enter
+the per-frame path. The timer only runs while the panel is visible.
+
+### Verified
+
+Scale step-down and restore; layer toggles; `weightScale: 0` fully disabling an event (0 bat
+spawns against 32 ghosts over 30 simulated minutes); `paused` and `maxConcurrent: 0` both halting
+scheduling, with `trigger()` refused at cap 0; `resetTuning()` restoring authored values; panel
+removed from the DOM and body class cleared on dispose, with no new warnings.
+
 ## 2026-09-20 — SVG art converts by alpha-threshold; art pipeline deferred to M3.5
 
 Owner-authored graveyard art landed in `reference/` during the M2 gate. Three rulings.

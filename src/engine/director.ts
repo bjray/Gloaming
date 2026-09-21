@@ -36,6 +36,24 @@ interface Instance {
   elapsedSeconds: number
 }
 
+/**
+ * Runtime overrides for pacing. Seeded from the scene's authored `EventPool`, then mutated
+ * freely by the M3 panel.
+ *
+ * **Content stays the default; this is an override layer.** The panel never writes to the scene
+ * data, so the authored numbers remain the reviewable source of truth and a reload returns to
+ * them. The workflow M4 expects is: move the sliders until the pacing feels right, then copy the
+ * settled values back into `content/` as a deliberate edit.
+ */
+export interface DirectorTuning {
+  meanSpawnIntervalSeconds: number
+  maxConcurrent: number
+  /** Multiplier on each event's authored weight, by event id. 0 disables that event. */
+  weightScale: Record<string, number>
+  /** Stop scheduling new spawns. Live instances still run out their lifetimes. */
+  paused: boolean
+}
+
 export interface DirectorStats {
   readonly activeCount: number
   readonly spawnedTotal: number
@@ -45,6 +63,12 @@ export interface DirectorStats {
 
 export interface Director {
   update(deltaSeconds: number, timeBlock: TimeBlock): void
+  /** Mutable pacing overrides. See `DirectorTuning`. */
+  readonly tuning: DirectorTuning
+  /** Restore every tuning value to what the scene authored. */
+  resetTuning(): void
+  /** The events this pool contains, for the panel to enumerate. */
+  readonly events: readonly EventDef[]
   /**
    * Spawn an event immediately, bypassing the schedule and its cooldown.
    *
@@ -70,7 +94,18 @@ export function createDirector(pool: EventPool, layers: LayerSet): Director {
 
   let clock = 0
   let spawnedTotal = 0
-  let nextSpawnIn = exponentialInterval(pool.meanSpawnIntervalSeconds)
+
+  const authoredWeightScale = (): Record<string, number> =>
+    Object.fromEntries(pool.events.map((def) => [def.id, 1]))
+
+  const tuning: DirectorTuning = {
+    meanSpawnIntervalSeconds: pool.meanSpawnIntervalSeconds,
+    maxConcurrent: pool.maxConcurrent,
+    weightScale: authoredWeightScale(),
+    paused: false,
+  }
+
+  let nextSpawnIn = exponentialInterval(tuning.meanSpawnIntervalSeconds)
 
   const byId = new Map(pool.events.map((def) => [def.id, def]))
 
@@ -86,7 +121,10 @@ export function createDirector(pool: EventPool, layers: LayerSet): Director {
     return Math.max(0, def.cooldownSeconds - (clock - last))
   }
 
+  const effectiveWeight = (def: EventDef): number => def.weight * (tuning.weightScale[def.id] ?? 1)
+
   const isEligible = (def: EventDef, timeBlock: TimeBlock): boolean => {
+    if (effectiveWeight(def) <= 0) return false
     if (def.blocks && !def.blocks.includes(timeBlock)) return false
     if (cooldownRemaining(def) > 0) return false
     if (activeOf(def.id) >= def.maxConcurrent) return false
@@ -134,14 +172,14 @@ export function createDirector(pool: EventPool, layers: LayerSet): Director {
   function pick(timeBlock: TimeBlock): EventDef | undefined {
     let totalWeight = 0
     for (const def of pool.events) {
-      if (isEligible(def, timeBlock)) totalWeight += def.weight
+      if (isEligible(def, timeBlock)) totalWeight += effectiveWeight(def)
     }
     if (totalWeight <= 0) return undefined
 
     let roll = Math.random() * totalWeight
     for (const def of pool.events) {
       if (!isEligible(def, timeBlock)) continue
-      roll -= def.weight
+      roll -= effectiveWeight(def)
       if (roll <= 0) return def
     }
     return undefined
@@ -187,20 +225,33 @@ export function createDirector(pool: EventPool, layers: LayerSet): Director {
 
       // Schedule. The interval is redrawn on every spawn *and* on every blocked attempt, so a
       // blocked attempt does not queue up a burst the moment eligibility returns.
+      if (tuning.paused) return
+
       nextSpawnIn -= deltaSeconds
       if (nextSpawnIn > 0) return
 
-      nextSpawnIn = exponentialInterval(pool.meanSpawnIntervalSeconds)
+      nextSpawnIn = exponentialInterval(tuning.meanSpawnIntervalSeconds)
 
-      if (instances.length >= pool.maxConcurrent) return
+      if (instances.length >= tuning.maxConcurrent) return
       const def = pick(timeBlock)
       if (def) spawn(def)
     },
 
+    tuning,
+
+    resetTuning(): void {
+      tuning.meanSpawnIntervalSeconds = pool.meanSpawnIntervalSeconds
+      tuning.maxConcurrent = pool.maxConcurrent
+      tuning.weightScale = authoredWeightScale()
+      tuning.paused = false
+    },
+
+    events: pool.events,
+
     trigger(eventId: string): boolean {
       const def = byId.get(eventId)
       if (!def) return false
-      if (instances.length >= pool.maxConcurrent) return false
+      if (instances.length >= tuning.maxConcurrent) return false
       if (activeOf(def.id) >= def.maxConcurrent) return false
       spawn(def)
       return true

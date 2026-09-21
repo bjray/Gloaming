@@ -24,6 +24,8 @@ src/engine/     Rendering, director, time broker, spawner, motion. Scene-agnosti
   display.ts      Wake lock, fullscreen, click-to-begin overlay
 src/types/      Scene, event, and prop type definitions. The schema of record.
   scene.ts  layer.ts  prop.ts  visual.ts  sky.ts  palette.ts  time.ts  event.ts  motion.ts
+src/debug/      Debug tooling. Not part of the runtime scene.
+  panel.ts        The M3 tuning overlay (DOM, not PixiJS)
 src/main.ts     Boot. Wires engine to one scene; deliberately thin
 content/        Scene and event data. Declarative only, no logic.
   scenes/graveyard-night.ts
@@ -33,7 +35,7 @@ assets/         Art. Mirrors content/ structure. Empty so far — M1's placehold
 reference/      Direction material, NOT shippable assets. See reference/README.md
 ```
 
-Aliases: `@engine/*` -> `src/engine/*`, `@schema/*` -> `src/types/*`, `@content/*` -> `content/*`.
+Aliases: `@engine/*`, `@schema/*` -> `src/types/*`, `@content/*`, `@debug/*`.
 `@schema` rather than `@types`, which would collide with the `node_modules/@types` convention.
 
 **A new scene must be addable with changes only under `content/` and `assets/`.** If a scene
@@ -83,9 +85,16 @@ These break silently and are painful to trace later.
   in the scene's `events.events` array. `src/types/event.ts` is the contract: weight, cooldown,
   min/max duration, maxConcurrent, eligible blocks, layer, origin box, motion, visuals, fade.
   Keep motion above ~10 px/s or it steps visibly instead of gliding.
-- **Time override** (no panel until M3): `__gloaming.time.scrubTo(21)` holds the scene at 9pm,
-  `.setRate(0)` freezes, `.setRate(120)` runs a day in 12 minutes, `.clearOverride()` resumes the
-  wall clock. `__gloaming.director.trigger('ghost-drift')` forces an event.
+- **Tuning panel**: press `` ` `` (backtick). Time scrub/freeze/rate, camera amplitude, period and
+  waveform, spawn interval, global cap, per-event weight and force-fire, layer toggles, fps and
+  heap. Opening it re-fits the canvas beside it rather than covering the scene.
+  Panel changes land in `director.tuning` / `camera.config` — an **override layer**. Content stays
+  the default and a reload returns to it, so settled values must be copied into `content/`
+  deliberately. That is the M4 workflow.
+- **Console equivalents**: `__gloaming.time.scrubTo(21)`, `.setRate(0)`,
+  `.clearOverride()`, `__gloaming.director.trigger('ghost-drift')`.
+- **Measuring frame rate**: count frames over a window. PixiJS's `ticker.FPS` is instantaneous and
+  reported 123 under a working 30fps cap.
 - **Adding a colour** is two edits: the token name in `src/types/palette.ts`, then its hex in
   `src/engine/palette.ts`. The `Record<ColorToken, number>` there makes a missing mapping a
   compile error. Content refers to tokens only. Prefer reusing a token — the palette is a

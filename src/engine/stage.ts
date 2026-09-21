@@ -16,6 +16,15 @@ export interface Stage {
   readonly app: Application
   /** Parent of the four layer containers. */
   readonly world: Container
+  /**
+   * Reserve horizontal space and re-fit the canvas beside it.
+   *
+   * Used by the M3 panel: a tool for judging feel is useless while it covers the thing being
+   * judged. Stepping the integer scale down is the honest fix — the alternative, overlapping the
+   * canvas, hides part of the scene, and scaling it fractionally to fit would break the
+   * integer-only invariant to save a debug overlay.
+   */
+  setHorizontalReserve(px: number): void
   destroy(): void
 }
 
@@ -67,8 +76,11 @@ export async function createStage(host: HTMLElement): Promise<Stage> {
   const world = new Container({ label: 'world' })
   app.stage.addChild(world)
 
+  let horizontalReserve = 0
+
   const applyScale = (): void => {
-    const scale = integerScaleFor(window.innerWidth, window.innerHeight)
+    const available = Math.max(1, window.innerWidth - horizontalReserve)
+    const scale = integerScaleFor(available, window.innerHeight)
     canvas.style.width = `${VIRTUAL_WIDTH * scale}px`
     canvas.style.height = `${VIRTUAL_HEIGHT * scale}px`
   }
@@ -79,6 +91,10 @@ export async function createStage(host: HTMLElement): Promise<Stage> {
   return {
     app,
     world,
+    setHorizontalReserve(px: number): void {
+      horizontalReserve = Math.max(0, px)
+      applyScale()
+    },
     destroy(): void {
       window.removeEventListener('resize', applyScale)
       // Tears down the renderer, the ticker, and the one container this module created.

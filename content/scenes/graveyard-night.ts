@@ -23,6 +23,10 @@ export const graveyardNight: Scene = {
   id: 'graveyard-night',
   name: 'Graveyard — Night',
 
+  // Foreground art overscans to x=-48/688 at parallax 1.0, so 48px of drift is exactly flush.
+  // 40 keeps 8px of margin at the extreme.
+  maxDriftAmplitudePx: 40,
+
   /**
    * Sky ramp across the day, sampled continuously from `dayPhase` (§5.2).
    *

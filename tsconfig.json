@@ -21,7 +21,8 @@
     "paths": {
       "@engine/*": ["./src/engine/*"],
       "@schema/*": ["./src/types/*"],
-      "@content/*": ["./content/*"]
+      "@content/*": ["./content/*"],
+      "@debug/*": ["./src/debug/*"]
     }
   },
   "include": ["src", "content", "vite.config.ts"]
