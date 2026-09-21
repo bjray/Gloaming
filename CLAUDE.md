@@ -40,6 +40,11 @@ Aliases: `@engine/*` -> `src/engine/*`, `@schema/*` -> `src/types/*`, `@content/
 needs something in `src/engine/`, that's a missing abstraction — stop and say so rather than
 adding the special case.
 
+This targets scene-*specific* special cases, not new generic capability. Adding a **motion kind**
+to the engine's vocabulary (`src/types/motion.ts` + a case in `src/engine/motion.ts`) is an
+engine primitive and needs no ask — ruled 2026-09-20, see `DECISIONS.md`. Adding
+`if (scene === 'graveyard')` anywhere is the thing this rule forbids.
+
 ---
 
 ## Invariants

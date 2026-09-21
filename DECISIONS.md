@@ -9,7 +9,10 @@ questions still open.
 
 ## 2026-09-20 — Motion vocabulary is engine-owned, parameters are content-owned
 
-**Raised, not settled unilaterally** — this qualifies a rule in CLAUDE.md and deserves a ruling.
+**Settled by the owner, 2026-09-20: adding a motion kind is an engine primitive, not a missing
+abstraction.** Raised because CLAUDE.md instructs stopping when a scene needs engine code; ruled
+that the rule targets scene-*specific* special cases, not new generic capability. No further ask
+needed before adding kinds.
 
 `src/types/motion.ts` defines a **closed** set of motion kinds (`linear`, `drift`). Content picks
 a kind and supplies its numbers; the engine owns which kinds exist. Adding a genuinely new *kind*
@@ -21,12 +24,19 @@ A vocabulary is a closed set by definition. The alternative is content supplying
 code, which `CLAUDE.md` forbids outright ("Declarative only, no logic") and which would make
 scene files unreviewable.
 
-**Why it needs flagging anyway.** `CLAUDE.md` says "a new scene must be addable with changes only
-under `content/` and `assets/`", and instructs that needing engine code means a missing
-abstraction. A scene wanting motion genuinely outside the vocabulary *does* touch the engine. The
-claim here is that this is a capability boundary rather than a missing abstraction — motion kinds
-are engine primitives in the same way the renderer's shape primitives are — but that is a
-judgement, and the owner may prefer to read the rule more strictly.
+**Why it was flagged.** `CLAUDE.md` says "a new scene must be addable with changes only under
+`content/` and `assets/`", and instructs that needing engine code means a missing abstraction. A
+scene wanting motion outside the vocabulary *does* touch the engine.
+
+**The ruling.** Motion kinds are engine primitives, in the same way the renderer's shape
+primitives are. The rule exists to keep scene-specific special cases out of the engine — an
+`if (scene === 'graveyard')` — not to forbid new generic capability that any scene can use.
+
+**The alternative, rejected.** A composition system letting content assemble motion from building
+blocks (a sine term, a noise term, a ramp, summed) would remove the engine change entirely. It
+was rejected because it makes content files substantially harder to read and review, and amounts
+to logic-in-content by another name, which CLAUDE.md rules out elsewhere. The cost of being wrong
+here is a refactor of two small files, which does not justify the complexity up front.
 
 **Practical consequence.** Adding a scene: content only. Adding an event that reuses existing
 motion: content only. Adding an event needing novel motion: one engine addition, then content.
